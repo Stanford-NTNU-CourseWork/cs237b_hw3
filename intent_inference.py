@@ -56,8 +56,8 @@ if __name__ == '__main__':
             # - action (1 x 2 numpy array) is the current action the user took when the observation is obs
             # The code should set a variable called "probs" which is list keeping the probabilities associated with goals[scenario_name], respectively.
             # HINT: multivariate_normal from scipy.stats might be useful, which is already imported. Or you can implement it yourself, too.
-
-
+            p_a_mid_og = np.array([nn_models[g](obs)[action] for g in goals])
+            probs = p_a_mid_og/np.sum(p_a_mid_og)
             ########## Your code ends here ##########
             
             

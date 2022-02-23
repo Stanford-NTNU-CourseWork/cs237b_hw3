@@ -54,5 +54,5 @@ if __name__ == '__main__':
                 env.close()
                 if args.visualize: time.sleep(1)
                 if env.target_reached: success_counter += 1
-    if not args.visualize: print('Success Rate = ' + str(float(success_counter)/episode_number))
+    print('Success Rate = ' + str(float(success_counter)/episode_number))
     

@@ -21,13 +21,13 @@ class NN(tf.keras.Model):
         #         - tf.keras.initializers.GlorotNormal
         #         - tf.keras.initializers.he_uniform or tf.keras.initializers.he_normal
         
-        hidden = 4
+        hidden = 10
 
         initializer = tf.keras.initializers.GlorotUniform()
         self.all_layers = [
             tf.keras.layers.InputLayer(input_shape=(in_size,)),
         ]
-        dense_layers_num = 1
+        dense_layers_num = 2
         for i in range(dense_layers_num):
             self.all_layers.append(
                 tf.keras.layers.Dense(hidden, activation='relu', kernel_initializer=initializer, bias_initializer='zeros')
@@ -71,17 +71,22 @@ def loss(y_est, y):
     # HINT: You may find the classes of tensorflow_probability.distributions (imported as tfd) useful.
     #       In particular, you can use MultivariateNormalFullCovariance or MultivariateNormalTriL, but they are not the only way.
     n = y.shape[0]
-    mu = 1e-3
+    mu = 1e-5
     means = y_est[:, :2]
     As =  tf.reshape(y_est[:,2:], (-1, 2,2))
     
     covs = tf.matmul(As, tf.transpose(As, perm = (0,2,1)))
     covs = covs + tf.eye(2,2)*mu
-    dist = tfd.MultivariateNormalTriL(loc=means, scale_tril=tf.linalg.cholesky(covs))
-    
+    try:
+        dist = tfd.MultivariateNormalTriL(loc=means, scale_tril=tf.linalg.cholesky(covs))
+    except Exception as e:
+        print(e)
+        covs = covs + tf.eye(2,2)*1e-3
+        dist = tfd.MultivariateNormalTriL(loc=means, scale_tril=tf.linalg.cholesky(covs))
 
-    log_mean = dist.log_prob(y)/n
-    return -log_mean
+
+    log_mean = dist.log_prob(y)
+    return -tf.reduce_mean(log_mean)
     
     
     ########## Your code ends here ##########
@@ -132,7 +137,7 @@ def nn(data, args):
 
     train_data = tf.data.Dataset.from_tensor_slices((data['x_train'], data['y_train'])).shuffle(100000).batch(params['train_batch_size'])
 
-    for epoch in range(args.epochs):
+    for epoch in tqdm(range(args.epochs)):
         # Reset the metrics at the start of the next epoch
         train_loss.reset_states()
 

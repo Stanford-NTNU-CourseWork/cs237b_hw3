@@ -64,9 +64,9 @@ def loss(y_est, y):
     # At the end your code should return the scalar loss value.
     # HINT: Remember, you can penalize steering (0th dimension) and throttle (1st dimension) unequally
     
-    mse= tf.keras.losses.MeanSquaredError()
-    gamma = 0.05 # penalizing steering more than throttle
-    return mse(y[0],y_est[0]) + gamma*mse(y[1],y_est[1]) 
+    mad= tf.keras.losses.MeanAbsoluteError()
+    gamma = 0.5 # penalizing steering more than throttle
+    return mad(y[0],y_est[0]) + gamma*mad(y[1],y_est[1]) 
     ########## Your code ends here ##########
     
 

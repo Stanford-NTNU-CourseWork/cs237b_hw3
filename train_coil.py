@@ -3,7 +3,7 @@ import tensorflow as tf
 import argparse
 from utils import *
 from tensorflow_probability import distributions as tfd
-
+from tqdm import tqdm
 tf.config.run_functions_eagerly(True)
 
 class NN(tf.keras.Model):
@@ -37,11 +37,11 @@ class NN(tf.keras.Model):
         self.modules = []
         for i in range(3):
             module = []
+            #module.append(
+            #   tf.keras.layers.Dense(hidden, activation='relu', kernel_initializer=initializer, bias_initializer='zeros')
+            #)
             module.append(
-                tf.keras.layers.Dense(hidden, activation='relu', kernel_initializer=initializer, bias_initializer='zeros')
-            )
-            module.append(
-                        tf.keras.layers.Dense(6, kernel_initializer=initializer, bias_initializer='zeros')
+                        tf.keras.layers.Dense(out_size, kernel_initializer=initializer, bias_initializer='zeros')
         )
             self.modules.append(module)
 
@@ -63,16 +63,19 @@ class NN(tf.keras.Model):
         out = x
         for layer in self.base_layers:
             out = layer(out)
-        indices = [tf.math.equal(u, tf.cast(i, tf.int8)) for i in range(3)]
+        indices = [tf.cast(tf.math.equal(u, i) , tf.float32) for i in range(3)]
 
-    
-        print(indices[0])
-        print(out)
-        for i in range(3):
-            for layer in self.modules[i]:
-                out[indices[i]] = layer(tf.where(indices[i], out))
+        y1, y2, y3 = tf.multiply(indices[0],out), tf.multiply(indices[1],out), tf.multiply(indices[2],out)
+
+        for layer in self.modules[0]:
+            y1 = layer(y1)
+        for layer in self.modules[1]:
+            y2 = layer(y2)
+        for layer in self.modules[2]:
+            y3 = layer(y3)
+
+        out = y1 + y2 + y3
         
-
         return out     
 
         ########## Your code ends here ##########
@@ -87,19 +90,9 @@ def loss(y_est, y):
     # At the end your code should return the scalar loss value.
     # HINT: Remember, you can penalize steering (0th dimension) and throttle (1st dimension) unequally
 
-    n = y.shape[0]
-    mu = 1e-3
-    means = y_est[:, :2]
-    As =  tf.reshape(y_est[:,2:], (-1, 2,2))
-    
-    covs = tf.matmul(As, tf.transpose(As, perm = (0,2,1)))
-    covs = covs + tf.eye(2,2)*mu
-    dist = tfd.MultivariateNormalTriL(loc=means, scale_tril=tf.linalg.cholesky(covs))
-    
-
-    log_mean = dist.log_prob(y)/n
-    return -log_mean
-
+    mad= tf.keras.losses.MeanAbsoluteError()
+    gamma = 0.5 # penalizing steering more than throttle
+    return mad(y[0],y_est[0]) + gamma*mad(y[1],y_est[1]) 
     ########## Your code ends here ##########
    
 
@@ -149,7 +142,7 @@ def nn(data, args):
 
     train_data = tf.data.Dataset.from_tensor_slices((data['x_train'], data['y_train'], data['u_train'])).shuffle(100000).batch(params['train_batch_size'])
 
-    for epoch in range(args.epochs):
+    for epoch in tqdm(range(args.epochs)):
         # Reset the metrics at the start of the next epoch
         train_loss.reset_states()
 
